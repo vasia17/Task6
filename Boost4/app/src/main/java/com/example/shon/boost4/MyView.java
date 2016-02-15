@@ -1,125 +1,96 @@
 package com.example.shon.boost4;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
+import android.os.Build;
+import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.view.View;
 
-import com.firebase.client.DataSnapshot;
-import com.firebase.client.Firebase;
-import com.firebase.client.FirebaseError;
-import com.firebase.client.ValueEventListener;
+import java.util.List;
 
 public class MyView extends View {
-    Paint paint;
-    Path path;
-    Paint paint2;
-    Path path2;
-    Paint paint3;
-    Path path3;
-    Firebase ref = new Firebase("https://blistering-inferno-8458.firebaseio.com/parameters");
+
+    private List<Measurement> measurements;
+
+    private Paint X, Y, X1, Y1, Z;
+
     public MyView(Context context) {
-        super(context);
-        init();
-        init2();
-        init3();
+        this(context, null);
     }
 
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     public MyView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
-        init2();
-        init3();
+
+        X = new Paint(Paint.ANTI_ALIAS_FLAG);
+        X.setColor(Color.rgb(255, 153, 51));
+        X.setStrokeWidth(2);
+        X.setTextSize(16);
+
+        X1 = new Paint(Paint.ANTI_ALIAS_FLAG);
+        X1.setStyle(Paint.Style.STROKE);
+        X1.setColor(Color.rgb(255, 0, 0));
+        X1.setStrokeWidth(getResources().getDisplayMetrics().density * 2.0f);
+
+        Y1 = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Y1.setStyle(Paint.Style.STROKE);
+        Y1.setColor(Color.rgb(0, 0, 255));
+        Y1.setStrokeWidth(getResources().getDisplayMetrics().density * 2.0f);
+
+        Z = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Z.setStyle(Paint.Style.STROKE);
+        Z.setColor(Color.rgb(0, 255, 0));
+        Z.setStrokeWidth(getResources().getDisplayMetrics().density * 2.0f);
     }
 
-    public MyView(Context context, AttributeSet attrs, int defStyle) {
-        super(context, attrs, defStyle);
-        init();
-        init2();
-        init3();
+    public void setSamples(List<Measurement> m) {
+        this.measurements = m;
     }
-    private static class Parameters {
-        float x;
-        float y;
-        float z;
-        public Parameters() {
-        }
-        public float getX() {
-            return x;
-        }
-        public float getY() {
-            return y;
-        }
-        public float getZ() {
-            return z;
-        }
 
-    }
-    private void init() {
-        paint = new Paint();
-        paint.setColor(0xFFFF0000);
-        paint.setStrokeWidth(3);
-        paint.setStyle(Paint.Style.STROKE);
-        ref.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                
-            }
-            @Override
-            public void onCancelled(FirebaseError firebaseError) {
-
-            }
-        });
-        path = new Path();
-        path.lineTo(0, 0);
-        path.lineTo(25, 250);
-        path.lineTo(100, 250);
-        path.lineTo(100, 150);
-        path.lineTo(175, 175);
-
-    }
-    private void init2() {
-        paint2 = new Paint();
-        paint2.setColor(0xFF0000FF);
-        paint2.setStrokeWidth(3);
-        paint2.setStyle(Paint.Style.STROKE);
-
-        path2 = new Path();
-        path2.lineTo(200, 200);
-        path2.lineTo(50, 500);
-        path2.lineTo(200, 500);
-        path2.lineTo(200, 300);
-        path2.lineTo(350, 300);
-
-    }
-    private void init3() {
-        paint3 = new Paint();
-        paint3.setColor(0xFF00FF00);
-        paint3.setStrokeWidth(3);
-        paint3.setStyle(Paint.Style.STROKE);
-
-        path3 = new Path();
-        path3.lineTo(100, 25);
-        path3.lineTo(150, 50);
-        path3.lineTo(200, 75);
-        path3.lineTo(250, 100);
-        path3.lineTo(300, 125);
-
+    public void onViewDataChange() {
+        ViewCompat.postInvalidateOnAnimation(this);
     }
 
     @Override
-    protected void onDraw(final Canvas canvas) {
+    protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawPath(path, paint);
-        canvas.drawPath(path2, paint2);
-        canvas.drawPath(path3, paint3);
-    }
+        if (measurements.isEmpty()) {
+            return;
+        }
 
+        final float midHeight = getHeight() / 2.0f;
+        final float unitHeight = getHeight() / 20.0f;
+        final float unitWidth = (float) getWidth() / 21.0f;
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        setMeasuredDimension(720, 500);
+        canvas.drawLine(0, midHeight, getWidth(), midHeight, X);
+        canvas.drawLine(unitWidth, 0, unitWidth, getHeight(), X);
+        canvas.drawText("10", 8, 16, X);
+        canvas.drawText("-10", 8, getHeight()-8, X);
+        canvas.drawText("0", 16, midHeight-10, X);
+
+        float x = unitWidth, y1 = midHeight, y2 = midHeight, y3 = midHeight,
+                sx, sy1, sy2, sy3;
+
+        for (int i = 0; i < measurements.size(); i++) {
+            sx = x + unitWidth;
+
+            sy1 = unitHeight * -measurements.get(i).getX() + midHeight;
+            canvas.drawLine(x, y1, sx, sy1, X1);
+
+            sy2 = unitHeight * -measurements.get(i).getY() + midHeight;
+            canvas.drawLine(x, y2, sx, sy2, Y1);
+
+            sy3 = unitHeight * -measurements.get(i).getZ() + midHeight;
+            canvas.drawLine(x, y3, sx, sy3, Z);
+
+            x = sx;
+            y1 = sy1;
+            y2 = sy2;
+            y3 = sy3;
+        }
     }
 }

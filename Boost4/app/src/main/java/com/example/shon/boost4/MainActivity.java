@@ -13,22 +13,26 @@ import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.widget.CompoundButton;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.example.shon.boost4.service.AccelerometerService;
-import com.firebase.client.ChildEventListener;
-import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
-import com.firebase.client.FirebaseError;
 
-public class MainActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener,RecyclerViewAdapter.OnItemClickListener {
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements CompoundButton.OnCheckedChangeListener {
     public static final String MAIN_TAG = "my_app";
+    public static final int TIME_INTERVAL = 1000;
+    public static final int POS = 0;
+
+    public static Firebase mFireBaseRef;
+
+    private LinearLayout mLayoutMain;
     private Context mContext = this;
     private boolean mIsBound;
-
-    private RecyclerView myRecyclerView;
-    private LinearLayoutManager linearLayoutManager;
-    private RecyclerViewAdapter myRecyclerViewAdapter;
+    private List<Measurement> m = new ArrayList<>();
 
     private ServiceConnection mConnection = new ServiceConnection() {
         private AccelerometerService mAccBoundService;
@@ -44,58 +48,34 @@ public class MainActivity extends AppCompatActivity implements CompoundButton.On
         }
     };
 
-    private static class Parameters {
-        float x;
-        float y;
-        float z;
-        public Parameters() {
-
-        }
-
-        public float getX() {
-            return x;
-        }
-        public float getY() {
-            return y;
-        }
-        public float getZ() {
-            return z;
-        }
-
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mLayoutMain = (LinearLayout) findViewById(R.id.main);
         Toolbar myToolbar = (Toolbar) findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
         SwitchCompat switchCompat = (SwitchCompat) findViewById(R.id.switch_control);
         switchCompat.setOnCheckedChangeListener(this);
         Firebase.setAndroidContext(this);
+        mFireBaseRef = new Firebase("https://blistering-inferno-8458.firebaseio.com/");
 
-        myRecyclerView = (RecyclerView) findViewById(R.id.rv);
-        linearLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
-        myRecyclerViewAdapter = new RecyclerViewAdapter(this);
-        myRecyclerViewAdapter.setOnItemClickListener(this);
-        myRecyclerView.setAdapter(myRecyclerViewAdapter);
-        myRecyclerView.setLayoutManager(linearLayoutManager);
-        Firebase ref = new Firebase("https://blistering-inferno-8458.firebaseio.com/parameters");
-        ref.addChildEventListener(new ChildEventListener() {
-            @Override
-            public void onChildAdded(DataSnapshot snapshot, String previousChildKey) {
-                Parameters parameters = snapshot.getValue(Parameters.class);
-                myRecyclerViewAdapter.add(0,"           x:     " +  parameters.getX() + "      y:   " + parameters.getY() + "      z:   " + parameters.getZ());
-            }
-            @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
-            @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot) {}
-            @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
-            @Override
-            public void onCancelled(FirebaseError firebaseError) {}
-        });
+        RecyclerView rv = new RecyclerView(this);
+        rv.setLayoutManager(new LinearLayoutManager(this));
+        rv.setAdapter(new RecyclerViewAdapter(m));
+        rv.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 3));
+        mLayoutMain.addView(rv);
+
+
+        MyView view = new MyView(this);
+        view.setSamples(m);
+        view.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 2));
+        mLayoutMain.addView(view);
+
+        mFireBaseRef.addChildEventListener(new MyChildEventListener(rv, view));
+
     }
 
     @Override
@@ -124,11 +104,5 @@ public class MainActivity extends AppCompatActivity implements CompoundButton.On
         Log.d(MAIN_TAG, "MainActivity: onDestroy");
         super.onDestroy();
         doUnbindService();
-    }
-    @Override
-    public void onItemClick(RecyclerViewAdapter.ItemHolder item, int position) {
-        Toast.makeText(this,
-                position + " : " + item.getItemName(),
-                Toast.LENGTH_SHORT).show();
     }
 }

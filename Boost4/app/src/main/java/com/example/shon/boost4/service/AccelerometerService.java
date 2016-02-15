@@ -12,40 +12,20 @@ import android.os.IBinder;
 import android.util.Log;
 
 import com.example.shon.boost4.MainActivity;
+import com.example.shon.boost4.Measurement;
+import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
+import com.firebase.client.ValueEventListener;
 
 public class AccelerometerService extends Service implements SensorEventListener {
 
     private long lastUpdate = 0;
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
-    private Firebase mFirebaseRef;
     private int mCounter = 0;
-    private Firebase mSampleRef;
+    private Firebase mSamplesRef;
 
-
-    private class Measurement {
-        private float x;
-        private float y;
-        private float z;
-
-        public Measurement() {
-        }
-        public Measurement(float x, float y, float z) {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-        public float getX() {
-            return x;
-        }
-        public float getY() {
-            return y;
-        }
-        public float getZ() {
-            return z;
-        }
-    }
     public class AccelerometerBinder extends Binder {
         public AccelerometerService getService() {
             Log.d(MainActivity.MAIN_TAG, "AccelerometerBinder: getService");
@@ -69,12 +49,21 @@ public class AccelerometerService extends Service implements SensorEventListener
 
     @Override
     public void onCreate() {
-        Log.d(MainActivity.MAIN_TAG, "AccelerometerService: onCreate");
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
-        mFirebaseRef = new Firebase("https://blistering-inferno-8458.firebaseio.com/");
-        mFirebaseRef.keepSynced(true);
+
+        MainActivity.mFireBaseRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                mCounter = (int) dataSnapshot.getChildrenCount();
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
     }
 
     @Override
@@ -87,10 +76,10 @@ public class AccelerometerService extends Service implements SensorEventListener
     public void onSensorChanged(SensorEvent event) {
         Log.d(MainActivity.MAIN_TAG, "AccelerometerService: onSensorChanged " + String.valueOf(event.values[0]));
         long curTime = System.currentTimeMillis();
-        if ((curTime - lastUpdate) > 1000) {
-            mSampleRef = mFirebaseRef.child("parameters");
-            Measurement m = new Measurement(event.values[0], event.values[1], event.values[2]);
-            mSampleRef.push().setValue(m);
+        if ((curTime - lastUpdate) > MainActivity.TIME_INTERVAL) {
+            mSamplesRef = MainActivity.mFireBaseRef.child("parameters" + mCounter);
+            Measurement s = new Measurement(event.values[0], event.values[1], event.values[2]);
+            mSamplesRef.setValue(s);
             mCounter++;
             lastUpdate = curTime;
         }

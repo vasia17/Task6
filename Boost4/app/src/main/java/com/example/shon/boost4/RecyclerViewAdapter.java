@@ -1,96 +1,59 @@
 package com.example.shon.boost4;
 
-import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by Shon on 30.01.2016.
  */
-public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ItemHolder> {
+public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder> {
 
-    private List<String> itemsName;
-    private OnItemClickListener onItemClickListener;
-    private LayoutInflater layoutInflater;
+    private List<Measurement> measurements;
 
-    public RecyclerViewAdapter(Context context){
-        layoutInflater = LayoutInflater.from(context);
-        itemsName = new ArrayList<String>();
+    public RecyclerViewAdapter(List<Measurement> m) {
+        this.measurements = m;
     }
 
     @Override
-    public RecyclerViewAdapter.ItemHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View itemView = layoutInflater.inflate(R.layout.item_activity, parent, false);
-        return new ItemHolder(itemView, this);
+    public RecyclerViewAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_activity, parent, false);
+
+        return new ViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(RecyclerViewAdapter.ItemHolder holder, int position) {
-        holder.setItemName(itemsName.get(position));
+    public void onBindViewHolder(RecyclerViewAdapter.ViewHolder holder, int position) {
+        holder.X.setText("X: " + String.valueOf(measurements.get(position).getX()));
+        holder.Y.setText("Y: " + String.valueOf(measurements.get(position).getY()));
+        holder.Z.setText("Z: " + String.valueOf(measurements.get(position).getZ()));
+    }
+
+    public void add(Measurement m){
+        measurements.add(MainActivity.POS, m);
+        notifyItemInserted(MainActivity.POS);
     }
 
     @Override
     public int getItemCount() {
-        return itemsName.size();
+        return measurements.size();
     }
 
-    public void setOnItemClickListener(OnItemClickListener listener){
-        onItemClickListener = listener;
-    }
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        private TextView X;
+        private TextView Y;
+        private TextView Z;
 
-    public OnItemClickListener getOnItemClickListener(){
-        return onItemClickListener;
-    }
-
-    public interface OnItemClickListener{
-        public void onItemClick(ItemHolder item, int position);
-    }
-
-    public void add(int location, String iName){
-        itemsName.add(location, iName);
-        notifyItemInserted(location);
-    }
-
-    public void remove(int location){
-        if(location >= itemsName.size())
-            return;
-
-        itemsName.remove(location);
-        notifyItemRemoved(location);
-    }
-
-    public static class ItemHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
-
-        private RecyclerViewAdapter parent;
-        TextView textItemName;
-
-        public ItemHolder(View itemView, RecyclerViewAdapter parent) {
+        public ViewHolder(View itemView) {
             super(itemView);
-            itemView.setOnClickListener(this);
-            this.parent = parent;
-            textItemName = (TextView) itemView.findViewById(R.id.item_name);
-        }
-
-        public void setItemName(CharSequence name){
-            textItemName.setText(name);
-        }
-
-        public CharSequence getItemName(){
-            return textItemName.getText();
-        }
-
-        @Override
-        public void onClick(View v) {
-            final OnItemClickListener listener = parent.getOnItemClickListener();
-            if(listener != null){
-                listener.onItemClick(this, getPosition());
-            }
+            X = (TextView) itemView.findViewById(R.id.x);
+            Y = (TextView) itemView.findViewById(R.id.y);
+            Z = (TextView) itemView.findViewById(R.id.z);
         }
     }
 }
