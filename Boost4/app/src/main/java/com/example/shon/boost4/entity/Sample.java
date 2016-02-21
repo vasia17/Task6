@@ -1,27 +1,36 @@
-package com.example.shon.boost4;
+package com.example.shon.boost4.entity;
 
-/**
- * Created by Shon on 15.02.2016.
- */
-public class Measurement {
+public class Sample {
+
+    private String name;
     private float x;
     private float y;
     private float z;
 
-    public Measurement() {
+    public Sample() {
     }
-    public Measurement(float x, float y, float z) {
+
+    public Sample(String name, float x, float y, float z) {
+        this.name = name;
         this.x = x;
         this.y = y;
         this.z = z;
     }
+
+    public String getName() {
+        return name;
+    }
+
     public float getX() {
         return x;
     }
+
     public float getY() {
         return y;
     }
+
     public float getZ() {
         return z;
     }
+
 }
