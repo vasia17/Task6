@@ -321,8 +321,6 @@ public class MainActivity extends AppCompatActivity
         doUnbindService();
     }
 
-
-
     private class RetrieveTokenTask extends AsyncTask<String, Void, String> {
 
         @Override
