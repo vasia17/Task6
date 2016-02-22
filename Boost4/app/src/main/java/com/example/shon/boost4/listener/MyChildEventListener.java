@@ -25,7 +25,8 @@ public class MyChildEventListener implements ChildEventListener {
 
     @Override
     public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-        Log.d(MainActivity.MAIN_TAG, "MyChildEventListener: onChildAdded");
+        Log.d(MainActivity.MAIN_TAG, "MyChildEventListener: onChildAdded - "
+                + dataSnapshot.getValue(Sample.class).getClass().toString());
 
         mRecAdapter.add(dataSnapshot.getValue(Sample.class));
         mRecView.scrollToPosition(MainActivity.FIRST_SAMPLE_POS);

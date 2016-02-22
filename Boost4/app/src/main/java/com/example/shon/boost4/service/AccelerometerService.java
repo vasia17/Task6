@@ -13,7 +13,9 @@ import android.util.Log;
 
 import com.example.shon.boost4.MainActivity;
 import com.example.shon.boost4.entity.Sample;
-import com.firebase.client.Firebase;
+import com.firebase.client.DataSnapshot;
+import com.firebase.client.FirebaseError;
+import com.firebase.client.ValueEventListener;
 
 public class AccelerometerService extends Service
         implements SensorEventListener {
@@ -22,7 +24,6 @@ public class AccelerometerService extends Service
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
     private int mCounter = 0;
-    private Firebase mSamplesRef;
 
     /**
      * Class for clients to access.  Because we know this service always
@@ -60,6 +61,19 @@ public class AccelerometerService extends Service
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
 
+        if(MainActivity.sSamplesRef != null) {
+            MainActivity.sSamplesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    mCounter = (int) dataSnapshot.getChildrenCount() + 1;
+                }
+
+                @Override
+                public void onCancelled(FirebaseError firebaseError) {
+
+                }
+            });
+        }
     }
 
     @Override
@@ -70,18 +84,19 @@ public class AccelerometerService extends Service
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            long curTime = System.currentTimeMillis();
-            if ((curTime - lastUpdate) > MainActivity.TIME_INTERVAL) {
-                Log.d(MainActivity.MAIN_TAG, "AccelerometerService: onSensorChanged " +
-                        String.valueOf(event.values[0]));
+        if(MainActivity.sSamplesRef != null){
+            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                long curTime = System.currentTimeMillis();
+                if ((curTime - lastUpdate) > MainActivity.TIME_INTERVAL) {
+                    Log.d(MainActivity.MAIN_TAG, "AccelerometerService: onSensorChanged " +
+                            String.valueOf(event.values[0]));
 
-                mSamplesRef = MainActivity.sFireBaseRef;
-                Sample s = new Sample("sample" + mCounter, event.values[0], event.values[1], event.values[2]);
-                mSamplesRef.push().setValue(s);
+                    Sample s = new Sample("sample" + mCounter, event.values[0], event.values[1], event.values[2]);
+                    MainActivity.sSamplesRef.push().setValue(s);
 
-                mCounter++;
-                lastUpdate = curTime;
+                    mCounter++;
+                    lastUpdate = curTime;
+                }
             }
         }
     }

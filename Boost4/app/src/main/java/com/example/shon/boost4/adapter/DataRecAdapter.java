@@ -22,7 +22,7 @@ public class DataRecAdapter extends RecyclerView.Adapter<DataRecAdapter.ViewHold
     }
 
     @Override
-    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public DataRecAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
 
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.card_sample, parent, false);
@@ -31,7 +31,7 @@ public class DataRecAdapter extends RecyclerView.Adapter<DataRecAdapter.ViewHold
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
+    public void onBindViewHolder(DataRecAdapter.ViewHolder holder, int position) {
         holder.mSampleName.setText(mSamples.get(position).getName());
         holder.mSampleX.setText("Axis X: " + String.valueOf(mSamples.get(position).getX()));
         holder.mSampleY.setText("Axis Y: " + String.valueOf(mSamples.get(position).getY()));

@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,21 +23,25 @@ public class Data extends Fragment {
 
     private List<Sample> mSamples = new ArrayList<>();
 
+    private RecyclerView mRecView;
+    private MyPlotView mPlotView;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
         View data = inflater.inflate(R.layout.frag_data, container, false);
 
-        RecyclerView recView = (RecyclerView) data.findViewById(R.id.rv_samples);
-        recView.setLayoutManager(new LinearLayoutManager(getContext()));
-        recView.setAdapter(new DataRecAdapter(mSamples));
+        mRecView = (RecyclerView) data.findViewById(R.id.rv_samples);
+        mRecView.setLayoutManager(new LinearLayoutManager(getContext()));
+        mRecView.setAdapter(new DataRecAdapter(mSamples));
 
-        MyPlotView plotView = (MyPlotView) data.findViewById(R.id.my_plot_View);
-        plotView.setSamples(mSamples);
-        MainActivity.sFireBaseRef.addChildEventListener(new MyChildEventListener(recView, plotView));
+        mPlotView = (MyPlotView) data.findViewById(R.id.my_plot_View);
+        mPlotView.setSamples(mSamples);
 
+        if(MainActivity.sSamplesRef != null){
+            MainActivity.sChildEventListener = MainActivity.sSamplesRef
+                    .addChildEventListener(new MyChildEventListener(mRecView, mPlotView));
+        }
         return data;
     }
-
 }

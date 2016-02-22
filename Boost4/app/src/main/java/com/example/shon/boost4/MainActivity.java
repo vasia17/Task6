@@ -24,6 +24,7 @@ import android.widget.Toast;
 import com.example.shon.boost4.adapter.TabPagerAdapter;
 import com.example.shon.boost4.service.AccelerometerService;
 import com.firebase.client.AuthData;
+import com.firebase.client.ChildEventListener;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.google.android.gms.auth.GoogleAuthException;
@@ -50,31 +51,46 @@ public class MainActivity extends AppCompatActivity
     public static final String MAIN_TAG = "my_app";
     public static final int FIRST_SAMPLE_POS = 0;
     public static final int TIME_INTERVAL = 1000;
-    public static final int RC_SIGN_IN = 9001;
+
+    private static final int RC_SIGN_IN = 9001;
     private static final int REQ_SIGN_IN_REQUIRED = 55664;
+    private static final String FIREBASE_URL = "https://boostboost.firebaseio.com/";
 
+    public static Firebase sUsersRef;
+    public static Firebase sSamplesRef;
+    public static ChildEventListener sChildEventListener;
 
-    public static Firebase sFireBaseRef;
-
-    private Context mContext = this;
     private boolean mIsBound;
+    private Context mContext = this;
     private GoogleApiClient mGoogleApiClient;
     private String mAccountName;
     private ProgressDialog mProgressDialog;
     private TextView mStatusTextView;
+    private TabPagerAdapter mTabAdapter;
     private ServiceConnection mConnection = new ServiceConnection() {
         private AccelerometerService mAccBoundService;
 
         public void onServiceConnected(ComponentName className, IBinder service) {
+            // This is called when the connection with the service has been
+            // established, giving us the service object we can use to
+            // interact with the service.  Because we have bound to a explicit
+            // service that we know is running in our own process, we can
+            // cast its IBinder to a concrete class and directly access it.
             mAccBoundService = ((AccelerometerService.AccelerometerBinder) service).getService();
 
+            // Tell the user about this.
             Toast.makeText(mContext, R.string.local_service_connected,
                     Toast.LENGTH_SHORT).show();
         }
 
         public void onServiceDisconnected(ComponentName className) {
+            // This is called when the connection with the service has been
+            // unexpectedly disconnected -- that is, its process crashed.
+            // Because it is running in our same process, we should never
+            // see this happen.
             mAccBoundService = null;
 
+            // Tell the user about this.
             Toast.makeText(mContext, R.string.local_service_disconnected,
                     Toast.LENGTH_SHORT).show();
         }
@@ -85,7 +101,9 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Views
         final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar.setTitleTextAppearance(this, R.style.ToolBarTitleTextAppearance);
         setSupportActionBar(toolbar);
 
         initTabLayout();
@@ -100,9 +118,8 @@ public class MainActivity extends AppCompatActivity
         tabLayout.setTabGravity(TabLayout.GRAVITY_FILL);
 
         final ViewPager viewPager = (ViewPager) findViewById(R.id.vp_my_tabs);
-        final TabPagerAdapter tabAdapter = new TabPagerAdapter
-                (getSupportFragmentManager(), tabLayout.getTabCount());
-        viewPager.setAdapter(tabAdapter);
+        mTabAdapter = new TabPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount());
+        viewPager.setAdapter(mTabAdapter);
         viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
         tabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -144,9 +161,9 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    public void initFireBase() {
-        Firebase.setAndroidContext(this);
-        sFireBaseRef = new Firebase("https://boostsolution.firebaseio.com/measurements/");
+    private void initFireBase() {
+        sUsersRef = new Firebase(FIREBASE_URL).child("users");
+//        sSamplesRef = new Firebase(FIREBASE_URL).child("measurements");
     }
 
     @Override
@@ -157,10 +174,15 @@ public class MainActivity extends AppCompatActivity
 
         OptionalPendingResult<GoogleSignInResult> opr = Auth.GoogleSignInApi.silentSignIn(mGoogleApiClient);
         if (opr.isDone()) {
+            // If the user's cached credentials are valid, the OptionalPendingResult will be "done"
+            // and the GoogleSignInResult will be available instantly.
             Log.d(MAIN_TAG, "Got cached sign-in");
             GoogleSignInResult result = opr.get();
             handleSignInResult(result);
         } else {
+            // If the user has not previously signed in on this device or the sign-in has expired,
+            // this asynchronous branch will attempt to sign in the user silently.  Cross-device
+            // single sign-on will occur in this branch.
             showProgressDialog();
             opr.setResultCallback(new ResultCallback<GoogleSignInResult>() {
                 @Override
@@ -174,6 +196,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
         SwitchCompat switchCompat = (SwitchCompat) menu.getItem(0)
@@ -183,34 +206,43 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    // [START onActivityResult]
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         Log.d(MAIN_TAG, "MainActivity: onActivityResult");
 
+        // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {
             GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
             handleSignInResult(result);
         }
         if (requestCode == REQ_SIGN_IN_REQUIRED && resultCode == RESULT_OK) {
+            // We had to sign in - now we can finish off the token request.
             new RetrieveTokenTask().execute(mAccountName);
         }
     }
+    // [END onActivityResult]
+
+    // [START handleSignInResult]
     private void handleSignInResult(GoogleSignInResult result) {
         Log.d(MAIN_TAG, "MainActivity: handleSignInResult - " + result.isSuccess());
         if (result.isSuccess()) {
+            // Signed in successfully, show authenticated UI.
             GoogleSignInAccount acct = result.getSignInAccount();
 
             if (acct != null) {
                 mAccountName = acct.getEmail();
 
+                // run an async task to get an OAuth2 token for the account
                 new RetrieveTokenTask().execute(mAccountName);
             }
 
             mStatusTextView.setText(getString(R.string.signed_in_fmt, acct.getDisplayName()));
             updateUI(true);
         } else {
+            // Signed out, show unauthenticated UI.
             updateUI(false);
         }
     }
@@ -219,10 +251,11 @@ public class MainActivity extends AppCompatActivity
         Log.d(MAIN_TAG, "TOKEN IS " + token);
 
         if (token != null) {
-            sFireBaseRef.authWithOAuthToken("google", token, new AuthResultHandler("google"));
+            /* Successfully got OAuth token, now login with Google */
+            sUsersRef.authWithOAuthToken("google", token, new AuthResultHandler("google"));
         }
-    }
 
+    }
     private void signIn() {
         Log.d(MAIN_TAG, "MainActivity: signIn");
         Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
@@ -238,12 +271,16 @@ public class MainActivity extends AppCompatActivity
                         updateUI(false);
                     }
                 });
+        sSamplesRef = null;
+        updateDataFrag();
     }
+    // [END signOut]
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
+        // An unresolvable error has occurred and Google APIs (including Sign-In) will not
+        // be available.
         Log.d(MAIN_TAG, "MainActivity: onConnectionFailed - " + connectionResult);
-        Toast.makeText(this, "ConnectionFailed; " + connectionResult, Toast.LENGTH_SHORT);
     }
 
     private void showProgressDialog() {
@@ -309,6 +346,7 @@ public class MainActivity extends AppCompatActivity
     void doUnbindService() {
         Log.d(MAIN_TAG, "MainActivity: doUnbindService");
         if (mIsBound) {
+            // Detach our existing connection.
             unbindService(mConnection);
             mIsBound = false;
         }
@@ -320,8 +358,6 @@ public class MainActivity extends AppCompatActivity
         super.onDestroy();
         doUnbindService();
     }
-
-
 
     private class RetrieveTokenTask extends AsyncTask<String, Void, String> {
 
@@ -364,13 +400,20 @@ public class MainActivity extends AppCompatActivity
         public void onAuthenticated(AuthData authData) {
             Log.d(MAIN_TAG, provider + " auth successful \n" +
                     "authData: " + authData.toString());
-            Firebase firebase = new Firebase("https://boostsolution.firebaseio.com/Users");
-            firebase.child(authData.getUid()).setValue(authData);
 
+            sUsersRef.child(authData.getUid()).setValue(authData);
+            if (sSamplesRef != null) sSamplesRef.removeEventListener(sChildEventListener);
+            sSamplesRef = new Firebase(FIREBASE_URL).child("measurements").child(authData.getUid());
+            updateDataFrag();
         }
 
         @Override
         public void onAuthenticationError(FirebaseError firebaseError) {
         }
     }
+
+    private void updateDataFrag() {
+        mTabAdapter.notifyDataSetChanged();
+    }
 }
+

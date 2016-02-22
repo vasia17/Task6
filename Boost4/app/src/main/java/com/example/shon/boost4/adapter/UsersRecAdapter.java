@@ -29,7 +29,7 @@ public class UsersRecAdapter extends RecyclerView.Adapter<UsersRecAdapter.ViewHo
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
+    public void onBindViewHolder(UsersRecAdapter.ViewHolder holder, int position) {
         holder.mUserName.setText("Name: ");
         holder.mUserEmail.setText("Email: ");
         holder.mUserUId.setText("uId: ");
